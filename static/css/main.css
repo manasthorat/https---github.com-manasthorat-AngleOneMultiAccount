@@ -1,0 +1,11 @@
+html, body {
+    overflow-x: hidden;
+}
+
+.sidebar {
+    min-height: 100vh;
+}
+
+.main-content {
+    overflow-x: auto;
+}

@@ -1,0 +1,96 @@
+<!-- templates/edit_account.html -->
+{% extends "base.html" %}
+
+{% block title %}Edit Account - Angle One Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Edit Account</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="/accounts" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Accounts
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Edit Angle One Account</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username (Display Name)</label>
+                            <input type="text" class="form-control" id="username" name="username" value="{{ account.username }}">
+                            <div class="form-text">A friendly name to identify this account (optional)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">Client ID</label>
+                            <input type="text" class="form-control" id="client_id" name="client_id" value="{{ account.client_id }}" readonly>
+                            <div class="form-text">Your Angle One username/client ID (cannot be changed)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="api_key" class="form-label">API Key</label>
+                            <input type="text" class="form-control" id="api_key" name="api_key" value="{{ account.api_key }}" required>
+                            <div class="form-text">Your Angle One API key (from API management section)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" value="{{ account.password }}" required>
+                            <div class="form-text">Your Angle One account password</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="totp_key" class="form-label">TOTP Secret</label>
+                            <input type="text" class="form-control" id="totp_key" name="totp_key" value="{{ account.totp_key }}" required>
+                            <div class="form-text">Your TOTP secret key for generating authentication codes</div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if account.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">Enable Trading</label>
+                            <div class="form-text">When enabled, this account will receive trade signals</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Update Account</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Account Status</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>Client ID:</strong> {{ account.client_id }}
+                    </p>
+                    <p>
+                        <strong>Connection Status:</strong> 
+                        {% if account.status == 'Active' %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Last Login:</strong> {{ account.last_login }}
+                    </p>
+                    <hr>
+                    <p>
+                        <strong>Trading Status:</strong>
+                        {% if account.is_active %}
+                        <span class="badge bg-success">ON</span>
+                        {% else %}
+                        <span class="badge bg-secondary">OFF</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

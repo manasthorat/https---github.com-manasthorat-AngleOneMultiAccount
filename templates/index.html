@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angle One Trading System</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #2ecc71;
+            --dark-color: #1a2530;
+            --light-color: #ecf0f1;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --text-color: #2c3e50;
+            --light-text: #7f8c8d;
+            --border-color: #e0e6ed;
+            --hover-color: #f5f9fc;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafb;
+            color: var(--text-color);
+        }
+
+        /* Navbar styles */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px 20px;
+            height: 65px;
+        }
+
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.4rem;
+            color: white;
+            margin-left: 5px;
+        }
+
+        /* Sidebar styles */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 65px 0 0;
+            background-color: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+            border-right: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: 1rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: #2c3e50;
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+            margin: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .nav-link:hover {
+            background-color: var(--hover-color);
+            color: var(--secondary-color);
+        }
+
+        .nav-link.active {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .nav-link i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        /* Main content styles */
+        .main-content {
+            margin-left: 240px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+
+        /* Card styles */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 25px;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        /* Buttons */
+        .btn {
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #1a6fb5 100%);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1a6fb5 0%, var(--secondary-color) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(26, 111, 181, 0.2);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #27ae60 100%);
+            border: none;
+        }
+
+        /* Custom stats card */
+        .stats-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-card-title {
+            font-size: 0.9rem;
+            color: var(--light-text);
+            margin-bottom: 10px;
+        }
+
+        .stats-card-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stats-card-badge {
+            border-radius: 50px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Feature cards */
+        .feature-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            height: 60px;
+            width: 60px;
+            border-radius: 12px;
+            background: var(--hover-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .feature-icon i {
+            font-size: 1.8rem;
+            color: var(--secondary-color);
+        }
+
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        /* Account status indicators */
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .active {
+            background-color: var(--accent-color);
+        }
+
+        /* Welcome section */
+        .welcome-section {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #1a6fb5 100%);
+            border-radius: 12px;
+            padding: 30px;
+            color: white;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(26, 111, 181, 0.2);
+        }
+
+        .welcome-section h1 {
+            font-weight: 700;
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+        }
+
+        .welcome-section p {
+            font-weight: 300;
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 80%;
+        }
+
+        .welcome-section::after {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .welcome-section::before {
+            content: '';
+            position: absolute;
+            bottom: -80px;
+            right: 20%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .welcome-section {
+                padding: 20px;
+            }
+
+            .welcome-section h1 {
+                font-size: 1.8rem;
+            }
+
+            .welcome-section p {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark fixed-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-graph-up-arrow"></i> Angle One Trading System
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3">Welcome, Admin</span>
+                <a href="/logout" class="btn btn-sm btn-outline-light">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-white sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/dashboard">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/accounts">
+                                <i class="bi bi-person-badge"></i> Accounts
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/positions">
+                                <i class="bi bi-graph-up"></i> Positions
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/options">
+                                <i class="bi bi-table"></i> Options Chain
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/orders">
+                                <i class="bi bi-list-check"></i> Orders
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 col-lg-10 main-content">
+                <!-- Welcome Section -->
+                <div class="welcome-section">
+                    <h1>Welcome to Angle One Trading System</h1>
+                    <p>Manage your trading accounts, monitor positions, and automate your trading strategies all in one place.</p>
+                    <a href="/dashboard" class="btn btn-light mt-3">
+                        <i class="bi bi-grid-1x2"></i> View Dashboard
+                    </a>
+                </div>
+
+                <!-- Stats Row Removed -->
+
+                <!-- Getting Started Card -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex align-items-center">
+                        <i class="bi bi-lightning-charge-fill me-2 text-warning"></i>
+                        <h5 class="mb-0">Getting Started</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead">Welcome to the Angle One Multi-Account Trading System. This system allows you to automate trading across multiple Angle One accounts using TradingView webhooks.</p>
+                        
+                        <p><strong>To get started:</strong></p>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="d-flex align-items-start">
+                                    <div class="bg-light rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="height: 50px; width: 50px;">
+                                        <h3 class="mb-0">1</h3>
+                                    </div>
+                                    <div>
+                                        <h6>Configure Accounts</h6>
+                                        <p class="mb-0 text-muted">Set up your Angle One accounts in the <a href="/accounts" class="text-decoration-none">Accounts</a> section</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="d-flex align-items-start">
+                                    <div class="bg-light rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="height: 50px; width: 50px;">
+                                        <h3 class="mb-0">2</h3>
+                                    </div>
+                                    <div>
+                                        <h6>Configure Alerts</h6>
+                                        <p class="mb-0 text-muted">Set up TradingView alerts to send webhooks to your server</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="d-flex align-items-start">
+                                    <div class="bg-light rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="height: 50px; width: 50px;">
+                                        <h3 class="mb-0">3</h3>
+                                    </div>
+                                    <div>
+                                        <h6>Monitor Trading</h6>
+                                        <p class="mb-0 text-muted">Track your orders and positions in the dashboard</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features Row -->
+                <h5 class="mb-3">Key Features</h5>
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <h5 class="feature-title">Multi-Account Management</h5>
+                            <p class="text-muted">Manage multiple Angle One trading accounts from a single interface.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-graph-up-arrow"></i>
+                            </div>
+                            <h5 class="feature-title">Advanced Position Tracking</h5>
+                            <p class="text-muted">Monitor your positions with real-time P&L updates and performance metrics.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="bi bi-robot"></i>
+                            </div>
+                            <h5 class="feature-title">Automated Trading</h5>
+                            <p class="text-muted">Execute trades automatically based on TradingView alerts and custom strategies.</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>

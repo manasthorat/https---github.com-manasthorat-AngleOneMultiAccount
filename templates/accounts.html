@@ -1,0 +1,97 @@
+<!-- templates/accounts.html -->
+{% extends "base.html" %}
+
+{% block title %}Accounts - Angle One Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Accounts Management</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="/add_account" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Account
+            </a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>Angle One Accounts</h5>
+        </div>
+        <div class="card-body">
+            {% if accounts %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Client ID</th>
+                            <th>Username</th>
+                            <th>API Key</th>
+                            <th>Status</th>
+                            <th>Trading</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in accounts %}
+                        <tr>
+                            <td>{{ account.client_id }}</td>
+                            <td>{{ account.username or 'Unnamed' }}</td>
+                            <td>{{ account.api_key[:8] }}***</td>
+                            <td>
+                                {% if account.status == 'Active' %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="/toggle_account/{{ account.client_id }}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm {% if account.is_active %}btn-success{% else %}btn-secondary{% endif %}">
+                                        {% if account.is_active %}ON{% else %}OFF{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                            <td>{{ account.last_login }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="/edit_account/{{ account.client_id }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ loop.index }}">Delete</button>
+                                </div>
+                                
+                                <!-- Delete Modal -->
+                                <div class="modal fade" id="deleteModal{{ loop.index }}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete the account <strong>{{ account.username or account.client_id }}</strong>?
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="/delete_account/{{ account.client_id }}" method="post">
+                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info" role="alert">
+                No accounts have been added yet. Click the "Add Account" button to get started.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

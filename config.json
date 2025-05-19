@@ -1,0 +1,10 @@
+{
+    "webhook_secret": "6COBEMA242B2RHLIX52KTSYI5Q",
+    "disable_ip_check": true,
+    "port": 5000,
+    "admin_username": "admin",
+    "admin_password": "admin",
+    "default_option_moneyness": "OTM",
+    "default_expiry_preference": "monthly",
+    "default_lot_size": 1
+}

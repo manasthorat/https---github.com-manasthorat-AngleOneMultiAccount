@@ -1,0 +1,958 @@
+{% extends "base.html" %}
+
+{% block title %}Options Chain - Angle One Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Options Chain Viewer</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.location.reload()">
+                <i class="bi bi-arrow-repeat"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Options Interface -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Options Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="symbolSelect" class="form-label">Select Symbol</label>
+                        <select id="symbolSelect" class="form-select">
+                            <option value="" disabled selected>Select a symbol</option>
+                            <option value="NIFTY">Nifty 50 (NIFTY)</option>
+                            <option value="BANKNIFTY">Bank Nifty (BANKNIFTY)</option>
+                            <option value="FINNIFTY">Fin Nifty (FINNIFTY)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="expirySelect" class="form-label">Select Expiry</label>
+                        <select id="expirySelect" class="form-select">
+                            <option value="" disabled selected>Select symbol first</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="moneynessSelect" class="form-label">Moneyness</label>
+                        <select id="moneynessSelect" class="form-select">
+                            <option value="ATM" selected>At The Money (ATM)</option>
+                            <option value="ITM">In The Money (ITM)</option>
+                            <option value="OTM">Out of The Money (OTM)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="depthInput" class="form-label">Moneyness Depth</label>
+                        <input type="number" class="form-control" id="depthInput" value="0" min="0" max="10">
+                        <small class="text-muted">How many strikes away from ATM (0 for ATM itself)</small>
+                    </div>
+                    
+                    <!-- New Order Type Field -->
+                    <div class="mb-3">
+                        <label for="orderTypeSelect" class="form-label">Order Type</label>
+                        <select id="orderTypeSelect" class="form-select">
+                            <option value="MARKET" selected>MARKET</option>
+                            <option value="LIMIT">LIMIT</option>
+                            <option value="SL">STOP LOSS</option>
+                            <option value="SL-M">SL-MARKET</option>
+                        </select>
+                        <small class="text-muted">Type of order to place</small>
+                    </div>
+                    
+                    <!-- New Product Type Field -->
+                    <div class="mb-3">
+                        <label for="productTypeSelect" class="form-label">Product Type</label>
+                        <select id="productTypeSelect" class="form-select">
+                            <option value="INTRADAY" selected>INTRADAY</option>
+                            <option value="CARRYFORWARD">CARRYFORWARD</option>
+                            <option value="DELIVERY">DELIVERY</option>
+                        </select>
+                        <small class="text-muted">Product type for the order</small>
+                    </div>
+                    
+                    <!-- New Exit Order Type Field -->
+                    <div class="mb-3">
+                        <label for="exitOrderTypeSelect" class="form-label">Exit Order Type</label>
+                        <select id="exitOrderTypeSelect" class="form-select">
+                            <option value="MARKET" selected>MARKET</option>
+                            <option value="LIMIT">LIMIT</option>
+                        </select>
+                        <small class="text-muted">Type of order when exiting the position</small>
+                    </div>
+                    
+                    <div id="currentPriceInfo" class="alert alert-info d-none">
+                        <strong>Current Price:</strong> <span id="underlyingPrice">0</span>
+                    </div>
+                    
+                    <button type="button" class="btn btn-success w-100" id="btnGenerateJson">
+                        <i class="bi bi-file-earmark-code"></i> Generate Webhook Template
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Option Chain</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="loadingIndicator" class="text-center my-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading option chain...</p>
+                    </div>
+                    
+                    <div id="errorMessage" class="alert alert-danger m-3 d-none"></div>
+                    
+                    <div id="noDataMessage" class="alert alert-info m-3 d-none">
+                        Please select a symbol and expiry to view the option chain.
+                    </div>
+                    
+                    <div id="optionChainContainer" class="d-none">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover table-striped mb-0" id="optionChainTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th colspan="2" class="text-center">CALLS</th>
+                                        <th class="text-center">Strike Price</th>
+                                        <th colspan="2" class="text-center">PUTS</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Last Price</th>
+                                        <th class="text-center">Strike</th>
+                                        <th>Last Price</th>
+                                        <th>Symbol</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="optionChainBody">
+                                    <!-- Option chain data will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>* ATM options highlighted in yellow, Selected Call strike in green, Selected Put strike in blue</small>
+                </div>
+            </div>
+            
+            <!-- JSON Result Card -->
+            <div class="card mb-4 d-none" id="jsonResultCard">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Webhook Template</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <p><strong>How to use:</strong> This template can be used with TradingView webhooks. The "action", "quantity", "underlying_stop_loss", and "underlying_target" values will be provided by your TradingView strategy.</p>
+                    </div>
+                    <pre id="generatedJson" class="bg-light p-3"></pre>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" id="btnCopyJson">
+                            <i class="bi bi-clipboard"></i> Copy to Clipboard
+                        </button>
+                        <button class="btn btn-success" id="btnDownloadJson">
+                            <i class="bi bi-download"></i> Download Template
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Symbol Search Modal -->
+    <div class="modal fade" id="symbolSearchModal" tabindex="-1" aria-labelledby="symbolSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="symbolSearchModalLabel">Select F&O Symbol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="modalSymbolSearch" placeholder="Filter results...">
+                        <button class="btn btn-outline-secondary" type="button" id="modalSearchBtn">Filter</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="symbolResultsTable">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Name</th>
+                                    <th>Exchange</th>
+                                    <th>Type</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="symbolResultsBody">
+                                <!-- Results will be populated dynamically -->
+                                <tr>
+                                    <td colspan="5" class="text-center">Search for a symbol to view results</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Option Trades -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between">
+            <h5>Active Option Trades</h5>
+            <div>
+                <input type="text" id="optionSearch" class="form-control form-control-sm" placeholder="Search trades...">
+            </div>
+        </div>
+        <div class="card-body">
+            {% if active_trades %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="optionsTable">
+                    <thead>
+                        <tr>
+                            <th>Client ID</th>
+                            <th>Option Symbol</th>
+                            <th>Type</th>
+                            <th>Underlying</th>
+                            <th>Underlying Price</th>
+                            <th>Targets</th>
+                            <th>Qty</th>
+                            <th>Entry Time</th>
+                            <th>Expiry</th>
+                            <th>Product Type</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trade in active_trades %}
+                        <tr>
+                            <td>{{ trade.client_id }}</td>
+                            <td>{{ trade.symbol }}</td>
+                            <td>{{ trade.option_type }}</td>
+                            <td>{{ trade.underlying_symbol }}</td>
+                            <td>
+                                {% if trade.current_underlying_price %}
+                                ₹{{ trade.current_underlying_price }}
+                                <br>
+                                <small>Entry: ₹{{ trade.underlying_entry_price }}</small>
+                                {% else %}
+                                Entry: ₹{{ trade.underlying_entry_price }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                SL: ₹{{ trade.underlying_stop_loss }}<br>
+                                Target: ₹{{ trade.underlying_target }}
+                            </td>
+                            <td>{{ trade.quantity }}</td>
+                            <td>{{ trade.entry_time }}</td>
+                            <td>{{ trade.expiry }}</td>
+                            <td>{{ trade.producttype }}</td>
+                            <td>
+                                <form action="/exit-option/{{ trade.client_id }}/{{ trade.symbol }}" method="post" onsubmit="return confirm('Are you sure you want to exit this option position?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">Exit</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info" role="alert">
+                No active option trades.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Cache DOM elements
+        const $symbolSelect = $('#symbolSelect');
+        const $expirySelect = $('#expirySelect');
+        const $moneynessSelect = $('#moneynessSelect');
+        const $depthInput = $('#depthInput');
+        const $orderTypeSelect = $('#orderTypeSelect');
+        const $productTypeSelect = $('#productTypeSelect');
+        const $exitOrderTypeSelect = $('#exitOrderTypeSelect');
+        const $loadingIndicator = $('#loadingIndicator');
+        const $errorMessage = $('#errorMessage');
+        const $noDataMessage = $('#noDataMessage');
+        const $optionChainContainer = $('#optionChainContainer');
+        const $optionChainBody = $('#optionChainBody');
+        const $currentPriceInfo = $('#currentPriceInfo');
+        const $underlyingPrice = $('#underlyingPrice');
+        const $jsonResultCard = $('#jsonResultCard');
+        const $generatedJson = $('#generatedJson');
+        const $btnGenerateJson = $('#btnGenerateJson');
+        const $btnCopyJson = $('#btnCopyJson');
+        const $btnDownloadJson = $('#btnDownloadJson');
+        const $modalSymbolSearch = $('#modalSymbolSearch');
+        const $modalSearchBtn = $('#modalSearchBtn');
+        const $symbolResultsBody = $('#symbolResultsBody');
+        
+        // Store options data
+        let currentOptionChain = null;
+        let currentUnderlyingPrice = 0;
+        let allFnoSymbols = [];
+        
+        // Store the webhook secret
+        const webhookSecret = "{{ webhook_secret }}";
+        
+        // Initialize the interface
+        initialize();
+        
+        function initialize() {
+            // Setup loading state
+            showInitialState();
+            
+            // Setup event handlers
+            $symbolSelect.on('change', handleSymbolChange);
+            $expirySelect.on('change', handleExpiryChange);
+            $moneynessSelect.on('change', updateOptionsUI);
+            $depthInput.on('change', updateOptionsUI);
+            $btnGenerateJson.on('click', generateJson);
+            $btnCopyJson.on('click', copyJsonToClipboard);
+            $btnDownloadJson.on('click', downloadJsonFile);
+            $modalSearchBtn.on('click', filterModalSymbols);
+            $modalSymbolSearch.on('keyup', filterModalSymbols);
+            
+            // Load F&O symbols
+            loadFnoSymbols();
+            
+            // Search in active trades
+            $("#optionSearch").on("keyup", function() {
+                var value = $(this).val().toLowerCase();
+                $("#optionsTable tbody tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+        }
+        
+        function loadFnoSymbols() {
+            $.ajax({
+                url: '/api/get-fno-symbols',
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success' && response.data) {
+                        allFnoSymbols = response.data;
+                        
+                        // Populate symbol dropdown with common indices first
+                        $symbolSelect.empty().append($('<option>', {
+                            value: '',
+                            text: 'Select a symbol',
+                            disabled: true,
+                            selected: true
+                        }));
+                        
+                        // First add indices
+                        const indices = response.data.filter(symbol => symbol.type === 'Index');
+                        indices.forEach(function(symbol) {
+                            $symbolSelect.append($('<option>', {
+                                value: symbol.symbol,
+                                text: `${symbol.name} (${symbol.symbol})`
+                            }));
+                        });
+                        
+                        // Then add a separator
+                        $symbolSelect.append($('<option>', {
+                            value: '',
+                            text: '─────────────────────',
+                            disabled: true
+                        }));
+                        
+                        // Then add stocks (first 10)
+                        const stocks = response.data.filter(symbol => symbol.type === 'Stock').slice(0, 10);
+                        stocks.forEach(function(symbol) {
+                            $symbolSelect.append($('<option>', {
+                                value: symbol.symbol,
+                                text: `${symbol.name} (${symbol.symbol})`
+                            }));
+                        });
+                        
+                        // Add "Search more..." option
+                        $symbolSelect.append($('<option>', {
+                            value: 'search',
+                            text: '🔍 Search for more stocks...'
+                        }));
+                    } else {
+                        // Show error
+                        console.error('Error loading F&O symbols:', response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading F&O symbols:', error);
+                }
+            });
+        }
+        
+        function filterModalSymbols() {
+            const query = $modalSymbolSearch.val().trim();
+            
+            if (query.length < 2 && query.length > 0) {
+                $symbolResultsBody.html('<tr><td colspan="5" class="text-center">Please enter at least 2 characters</td></tr>');
+                return;
+            }
+            
+            if (allFnoSymbols.length > 0) {
+                // Filter from cached symbols
+                let filteredSymbols;
+                
+                if (query.length === 0) {
+                    // Show first 20 symbols
+                    filteredSymbols = allFnoSymbols.slice(0, 20);
+                } else {
+                    // Filter by query
+                    filteredSymbols = allFnoSymbols.filter(symbol => 
+                        symbol.symbol.toLowerCase().includes(query.toLowerCase()) || 
+                        symbol.name.toLowerCase().includes(query.toLowerCase())
+                    );
+                }
+                
+                displaySymbolResults(filteredSymbols);
+            } else {
+                // API search if we don't have cached symbols
+                searchSymbols(query);
+            }
+        }
+        
+        function searchSymbols(query) {
+            $symbolResultsBody.html('<tr><td colspan="5" class="text-center">Searching...</td></tr>');
+            
+            $.ajax({
+                url: `/api/search-fno-symbols?query=${query}`,
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success' && response.data) {
+                        displaySymbolResults(response.data);
+                    } else {
+                        $symbolResultsBody.html(`<tr><td colspan="5" class="text-center">Error: ${response.message || 'Failed to search symbols'}</td></tr>`);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error searching symbols:', error);
+                    $symbolResultsBody.html('<tr><td colspan="5" class="text-center">Error searching symbols</td></tr>');
+                }
+            });
+        }
+        
+        function displaySymbolResults(symbols) {
+            if (!symbols || symbols.length === 0) {
+                $symbolResultsBody.html('<tr><td colspan="5" class="text-center">No symbols found</td></tr>');
+                return;
+            }
+            
+            let html = '';
+            symbols.forEach(function(symbol) {
+                html += `
+                <tr>
+                    <td>${symbol.symbol}</td>
+                    <td>${symbol.name || '-'}</td>
+                    <td>${symbol.exchange || 'NSE'}</td>
+                    <td>${symbol.type || 'Stock'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary select-symbol-btn" 
+                                data-symbol="${symbol.symbol}" 
+                                data-name="${symbol.name || symbol.symbol}">
+                            Select
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            
+            $symbolResultsBody.html(html);
+            
+            // Add click event to select buttons
+            $('.select-symbol-btn').on('click', function() {
+                const symbol = $(this).data('symbol');
+                const name = $(this).data('name');
+                
+                // Add to dropdown if not exists
+                if ($symbolSelect.find(`option[value="${symbol}"]`).length === 0) {
+                    $symbolSelect.append($('<option>', {
+                        value: symbol,
+                        text: `${name} (${symbol})`
+                    }));
+                }
+                
+                // Select the symbol
+                $symbolSelect.val(symbol).trigger('change');
+                
+                // Close modal
+                $('#symbolSearchModal').modal('hide');
+            });
+        }
+        
+        function handleSymbolChange() {
+            const symbol = $symbolSelect.val();
+            
+            // Check if "Search more..." option selected
+            if (symbol === 'search') {
+                // Reset selection
+                $symbolSelect.val('');
+                
+                // Open search modal
+                $('#symbolSearchModal').modal('show');
+                return;
+            }
+            
+            if (!symbol) return;
+            
+            // Reset UI
+            resetUI();
+            showLoading();
+            
+            // Clear expiry dropdown and add loading option
+            $expirySelect.empty().append($('<option>', {
+                value: '',
+                text: 'Loading expiry dates...',
+                disabled: true,
+                selected: true
+            }));
+            
+            // Fetch expiry dates
+            fetchExpiryDates(symbol);
+        }
+        
+        function handleExpiryChange() {
+            const symbol = $symbolSelect.val();
+            const expiry = $expirySelect.val();
+            
+            if (!symbol || !expiry) return;
+            
+            // Reset UI
+            resetUI();
+            showLoading();
+            
+            // Fetch option chain
+            fetchOptionChain(symbol, expiry);
+        }
+        
+        function fetchExpiryDates(symbol) {
+            $.ajax({
+                url: `/api/get-expiry-dates?symbol=${symbol}`,
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success' && response.data && response.data.length > 0) {
+                        // Populate expiry dropdown
+                        $expirySelect.empty();
+                        
+                        // Add each expiry date
+                        response.data.forEach(function(expiry) {
+                            $expirySelect.append($('<option>', {
+                                value: expiry,
+                                text: formatExpiryDate(expiry)
+                            }));
+                        });
+                        
+                        // Select first expiry and trigger change
+                        $expirySelect.val(response.data[0]).trigger('change');
+                    } else {
+                        // Show error
+                        showError(response.message || 'No expiry dates available');
+                        
+                        // Empty expiry dropdown with error
+                        $expirySelect.empty().append($('<option>', {
+                            value: '',
+                            text: 'Error fetching expiry dates',
+                            disabled: true,
+                            selected: true
+                        }));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching expiry dates:', error);
+                    showError('Failed to fetch expiry dates. Please try again.');
+                    
+                    // Add some default expiry dates for demo/testing
+                    let today = new Date();
+                    let defaultExpiries = [];
+                    
+                    // Find next Thursday (market weekly expiry)
+                    let dayToThursday = (4 - today.getDay() + 7) % 7;
+                    if (dayToThursday === 0 && today.getHours() >= 15) dayToThursday = 7;
+                    
+                    let nextThursday = new Date(today);
+                    nextThursday.setDate(today.getDate() + dayToThursday);
+                    
+                    // Format date as DDMMMYYYY (e.g., 25APR2024)
+                    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                    
+                    for (let i = 0; i < 4; i++) {
+                        let expiry = new Date(nextThursday);
+                        expiry.setDate(nextThursday.getDate() + (i * 7));
+                        
+                        let day = ('0' + expiry.getDate()).slice(-2);
+                        let month = months[expiry.getMonth()];
+                        let year = expiry.getFullYear();
+                        
+                        defaultExpiries.push(`${day}${month}${year}`);
+                    }
+                    
+                    // Create dropdown with default expiries
+                    $expirySelect.empty();
+                    defaultExpiries.forEach(function(expiry) {
+                        $expirySelect.append($('<option>', {
+                            value: expiry,
+                            text: formatExpiryDate(expiry)
+                        }));
+                    });
+                    
+                    // Select first expiry and trigger change
+                    $expirySelect.val(defaultExpiries[0]).trigger('change');
+                }
+            });
+        }
+        
+        function fetchOptionChain(symbol, expiry) {
+            $.ajax({
+                url: `/api/get-option-chain?symbol=${symbol}&expiry=${expiry}`,
+                type: 'GET',
+                success: function(response) {
+                    if (response.status === 'success' && response.data) {
+                        // Store option chain and current price
+                        currentOptionChain = response.data;
+                        currentUnderlyingPrice = response.data.underlying_price;
+                        
+                        // Update price display
+                        $underlyingPrice.text('₹' + currentUnderlyingPrice.toFixed(2));
+                        $currentPriceInfo.removeClass('d-none');
+                        
+                        // Populate option chain
+                        populateOptionChain(response.data);
+                        
+                        // Show option chain
+                        showOptionChain();
+                    } else {
+                        // Show error
+                        showError(response.message || 'No option chain data available');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching option chain:', error);
+                    showError('Failed to fetch option chain. Please try again.');
+                }
+            });
+        }
+        
+        function populateOptionChain(data) {
+            // Clear table body
+            $optionChainBody.empty();
+            
+            // Get selected moneyness and depth
+            const selectedMoneyness = $moneynessSelect.val();
+            const depth = parseInt($depthInput.val()) || 0;
+            
+            // Get calls and puts
+            const calls = data.calls || [];
+            const puts = data.puts || [];
+            
+            // Sort by strike price
+            calls.sort((a, b) => a.strike_price - b.strike_price);
+            puts.sort((a, b) => a.strike_price - b.strike_price);
+            
+            // Group calls and puts by strike price
+            const callsByStrike = {};
+            calls.forEach(call => {
+                callsByStrike[call.strike_price] = call;
+            });
+            
+            const putsByStrike = {};
+            puts.forEach(put => {
+                putsByStrike[put.strike_price] = put;
+            });
+            
+            // Get all strike prices
+            const allStrikes = [...new Set([...calls.map(c => c.strike_price), ...puts.map(p => p.strike_price)])];
+            allStrikes.sort((a, b) => a - b);
+            
+            // Find ATM strike (closest to current price)
+            const atmStrike = allStrikes.reduce((closest, current) => 
+                Math.abs(current - data.underlying_price) < Math.abs(closest - data.underlying_price) ? current : closest
+            , allStrikes[0]);
+            
+            // Find ATM index in the array
+            const atmIndex = allStrikes.indexOf(atmStrike);
+            
+            // Determine selected strikes based on moneyness and depth
+            let callHighlightStrike = null;
+            let putHighlightStrike = null;
+            
+            // Determine which strikes to highlight based on moneyness
+            switch(selectedMoneyness) {
+                case 'ATM':
+                    // For ATM, both call and put highlight the same strike
+                    callHighlightStrike = atmStrike;
+                    putHighlightStrike = atmStrike;
+                    break;
+                case 'ITM':
+                    // For calls, ITM means lower strikes (below ATM)
+                    const callItmIndex = Math.max(0, atmIndex - depth);
+                    callHighlightStrike = allStrikes[callItmIndex];
+                    
+                    // For puts, ITM means higher strikes (above ATM)
+                    const putItmIndex = Math.min(allStrikes.length - 1, atmIndex + depth);
+                    putHighlightStrike = allStrikes[putItmIndex];
+                    break;
+                case 'OTM':
+                    // For calls, OTM means higher strikes (above ATM)
+                    const callOtmIndex = Math.min(allStrikes.length - 1, atmIndex + depth);
+                    callHighlightStrike = allStrikes[callOtmIndex];
+                    
+                    // For puts, OTM means lower strikes (below ATM)
+                    const putOtmIndex = Math.max(0, atmIndex - depth);
+                    putHighlightStrike = allStrikes[putOtmIndex];
+                    break;
+            }
+            
+            // Populate rows
+            allStrikes.forEach(strike => {
+                const call = callsByStrike[strike] || {};
+                const put = putsByStrike[strike] || {};
+                
+                // Create row
+                const $row = $('<tr>');
+                
+                // Set appropriate class for this row
+                if (strike === atmStrike) {
+                    // ATM strike gets yellow background
+                    $row.addClass('bg-warning bg-opacity-25');
+                }
+                
+                // Call columns
+                const $callSymbolCell = $('<td>').text(call.symbol || '-');
+                const $callPriceCell = $('<td>').text(call.last_price ? '₹' + call.last_price : '-');
+                
+                // Highlight the selected call strike
+                if (strike === callHighlightStrike) {
+                    $callSymbolCell.addClass('bg-success bg-opacity-25');
+                    $callPriceCell.addClass('bg-success bg-opacity-25');
+                }
+                
+                $row.append($callSymbolCell);
+                $row.append($callPriceCell);
+                
+                // Strike price
+                $row.append(`<td class="text-center fw-bold">${strike}</td>`);
+                
+                // Put columns
+                const $putPriceCell = $('<td>').text(put.last_price ? '₹' + put.last_price : '-');
+                const $putSymbolCell = $('<td>').text(put.symbol || '-');
+                
+                // Highlight the selected put strike
+                if (strike === putHighlightStrike) {
+                    $putPriceCell.addClass('bg-info bg-opacity-25');
+                    $putSymbolCell.addClass('bg-info bg-opacity-25');
+                }
+                
+                $row.append($putPriceCell);
+                $row.append($putSymbolCell);
+                
+                // Add row to table
+                $optionChainBody.append($row);
+            });
+        }
+        
+        function generateJson() {
+            const symbol = $symbolSelect.val();
+            const expiry = $expirySelect.val();
+            
+            if (!symbol || !expiry) {
+                alert('Please select a symbol and expiry first');
+                return;
+            }
+            
+            // Get selected values
+            const moneyness = $moneynessSelect.val();
+            const depth = parseInt($depthInput.val()) || 0;
+            const ordertype = $orderTypeSelect.val();
+            const producttype = $productTypeSelect.val();
+            const exit_ordertype = $exitOrderTypeSelect.val();
+            
+            // Create JSON template with placeholder text (no TradingView syntax for preview)
+            const templatePreview = {
+                webhook_key: webhookSecret,
+                options_mode: true,
+                action: "STRATEGY_ACTION",
+                symbol: symbol,
+                exchange: "NSE",
+                quantity: "STRATEGY_QUANTITY",
+                option_moneyness: moneyness,
+                moneyness_depth: depth,
+                expiry_preference: expiry,
+                underlying_price: "CURRENT_PRICE",
+                underlying_stop_loss: "STOP_LOSS_PRICE",
+                underlying_target: "TARGET_PRICE",
+                ordertype: ordertype,
+                producttype: producttype,
+                exit_ordertype: exit_ordertype
+            };
+            
+            // Format JSON string for preview
+            const jsonString = JSON.stringify(templatePreview, null, 2);
+            
+            // Update JSON display
+            $generatedJson.text(jsonString);
+            
+            // Show JSON result card
+            $jsonResultCard.removeClass('d-none');
+            
+            // Update the info text to explain the placeholders
+            const $infoAlert = $jsonResultCard.find('.alert-info');
+            $infoAlert.html(`
+                <p><strong>How to use:</strong> This template can be used with TradingView webhooks. 
+                Click "Download Template" to get the file with proper TradingView variables. The placeholders will be replaced with:</p>
+                <ul>
+                    <li><code>STRATEGY_ACTION</code> with <code>strategy.order.action</code> (BUY or SELL)</li>
+                    <li><code>STRATEGY_QUANTITY</code> with <code>strategy.order.contracts</code></li>
+                    <li><code>CURRENT_PRICE</code> with <code>close</code></li>
+                    <li><code>STOP_LOSS_PRICE</code> with <code>strategy.order.stop_price</code></li>
+                    <li><code>TARGET_PRICE</code> with <code>strategy.order.limit_price</code></li>
+                </ul>
+                <p>New order parameters:</p>
+                <ul>
+                    <li><code>ordertype</code>: ${ordertype} - Type of order to place</li>
+                    <li><code>producttype</code>: ${producttype} - Product type for the position</li>
+                    <li><code>exit_ordertype</code>: ${exit_ordertype} - Order type used when exiting the position</li>
+                </ul>
+            `);
+        }
+
+        function downloadJsonFile() {
+            const symbol = $symbolSelect.val();
+            const expiry = $expirySelect.val();
+            
+            if (!symbol || !expiry) {
+                alert('Please select a symbol and expiry first');
+                return;
+            }
+            
+            // Get selected values
+            const moneyness = $moneynessSelect.val();
+            const depth = parseInt($depthInput.val()) || 0;
+            const ordertype = $orderTypeSelect.val();
+            const producttype = $productTypeSelect.val();
+            const exit_ordertype = $exitOrderTypeSelect.val();
+            
+            // Create request data
+            const requestData = {
+                symbol: symbol,
+                expiry: expiry,
+                moneyness: moneyness,
+                depth: depth,
+                ordertype: ordertype,
+                producttype: producttype,
+                exit_ordertype: exit_ordertype
+            };
+            
+            // Use fetch API to get the JSON file with TradingView placeholders
+            fetch('/generate-webhook-template', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                // Create download link
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${symbol}_webhook_template.json`;
+                
+                // Trigger download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            })
+            .catch(error => {
+                console.error('Error downloading template:', error);
+                alert('Error generating template file. Please try again.');
+            });
+        }
+                
+        function copyJsonToClipboard() {
+            const jsonText = $generatedJson.text();
+            
+            // Create temporary textarea
+            const $temp = $('<textarea>');
+            $('body').append($temp);
+            $temp.val(jsonText).select();
+            
+            // Copy to clipboard
+            document.execCommand('copy');
+            $temp.remove();
+            
+            // Show alert
+            alert('JSON copied to clipboard!');
+        }
+        
+        function formatExpiryDate(dateStr) {
+            try {
+                const day = dateStr.substring(0, 2);
+                const month = dateStr.substring(2, 5);
+                const year = dateStr.substring(5);
+                return `${day} ${month} ${year}`;
+            } catch (e) {
+                return dateStr;
+            }
+        }
+        
+        function showInitialState() {
+            $loadingIndicator.hide();
+            $errorMessage.addClass('d-none');
+            $noDataMessage.removeClass('d-none');
+            $optionChainContainer.addClass('d-none');
+        }
+        
+        function showLoading() {
+            $loadingIndicator.show();
+            $errorMessage.addClass('d-none');
+            $noDataMessage.addClass('d-none');
+            $optionChainContainer.addClass('d-none');
+        }
+        
+        function showError(message) {
+            $loadingIndicator.hide();
+            $errorMessage.removeClass('d-none').text(message);
+            $noDataMessage.addClass('d-none');
+            $optionChainContainer.addClass('d-none');
+        }
+        
+        function showOptionChain() {
+            $loadingIndicator.hide();
+            $errorMessage.addClass('d-none');
+            $noDataMessage.addClass('d-none');
+            $optionChainContainer.removeClass('d-none');
+        }
+        
+        function resetUI() {
+            $jsonResultCard.addClass('d-none');
+            currentOptionChain = null;
+        }
+        
+        function updateOptionsUI() {
+            // Re-populate option chain if we have data
+            if (currentOptionChain) {
+                populateOptionChain(currentOptionChain);
+            }
+        }
+    });
+</script>
+{% endblock %}

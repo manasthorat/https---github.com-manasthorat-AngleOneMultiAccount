@@ -1,0 +1,162 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Angle One Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Dashboard</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <button type="button" class="btn btn-sm btn-outline-primary me-2" id="refreshDashboard">
+                <i class="bi bi-arrow-repeat"></i> Refresh
+            </button>
+            <form action="/exit_all_positions" method="post" onsubmit="return confirm('Are you sure you want to exit all positions?');">
+                <button type="submit" class="btn btn-sm btn-danger">
+                    <i class="bi bi-x-circle"></i> Exit All Positions
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Accounts</h5>
+                    <p class="card-text display-6">{{ summary.active_accounts }}/{{ summary.total_accounts }}</p>
+                    <small>Active/Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Account Balance</h5>
+                    <p class="card-text display-6">₹{{ "{:,.2f}".format(summary.account_balance) }}</p>
+                    <small>Total available cash</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Open Positions</h5>
+                    <p class="card-text display-6">{{ summary.total_positions }}</p>
+                    <small>Across all accounts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card {% if summary.day_pnl >= 0 %}text-white bg-success{% else %}text-white bg-danger{% endif %} mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Today's P&L</h5>
+                    <p class="card-text display-6">₹{{ "{:,.2f}".format(summary.day_pnl) }}</p>
+                    <small>Realized + Unrealized</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accounts Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Account Status</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Client ID</th>
+                            <th>Status</th>
+                            <th>Balance</th>
+                            <th>Open Positions</th>
+                            <th>Day P&L</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in account_data %}
+                        <tr>
+                            <td>{{ account.client_id }}</td>
+                            <td>
+                                {% if account.status == 'Active' %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>₹{{ "{:,.2f}".format(account.balance|float) }}</td>
+                            <td>{{ account.positions }}</td>
+                            <td class="{% if account.day_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                ₹{{ "{:,.2f}".format(account.day_pnl|float) }}
+                            </td>
+                            <td>
+                                <a href="/api/account/{{ account.client_id }}/positions" class="btn btn-sm btn-outline-primary">View Positions</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- P&L Chart -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>P&L Breakdown by Account</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="pnlChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // P&L Chart
+        const ctx = document.getElementById('pnlChart').getContext('2d');
+        
+        const labels = [{% for account in account_data %}'{{ account.client_id }}',{% endfor %}];
+        const data = [{% for account in account_data %}{{ account.day_pnl }},{% endfor %}];
+        const backgroundColors = data.map(value => value >= 0 ? 'rgba(40, 167, 69, 0.5)' : 'rgba(220, 53, 69, 0.5)');
+        const borderColors = data.map(value => value >= 0 ? 'rgb(40, 167, 69)' : 'rgb(220, 53, 69)');
+        
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Today\'s P&L',
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Refresh button
+        $('#refreshDashboard').click(function() {
+            location.reload();
+        });
+    });
+</script>
+{% endblock %}

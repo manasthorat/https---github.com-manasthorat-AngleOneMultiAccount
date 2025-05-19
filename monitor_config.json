@@ -1,0 +1,19 @@
+{
+    "monitor_interval": 10,
+    "auto_save_interval": 60,
+    "exit_on_expiry": true,
+    "monitor_log_level": "INFO",
+    "market_hours": {
+      "start": "09:15:00",
+      "end": "15:30:00"
+    },
+    "notifications": {
+      "enable_email": false,
+      "enable_console": true,
+      "notify_on_exit": true
+    },
+    "performance": {
+      "check_all_underlyings": true,
+      "prices_cache_seconds": 5
+    }
+  }

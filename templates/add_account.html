@@ -1,0 +1,86 @@
+<!-- templates/add_account.html -->
+{% extends "base.html" %}
+
+{% block title %}Add Account - Angle One Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Add New Account</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="/accounts" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Accounts
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>New Angle One Account</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username (Display Name)</label>
+                            <input type="text" class="form-control" id="username" name="username">
+                            <div class="form-text">A friendly name to identify this account (optional)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">Client ID</label>
+                            <input type="text" class="form-control" id="client_id" name="client_id" required>
+                            <div class="form-text">Your Angle One username/client ID</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="api_key" class="form-label">API Key</label>
+                            <input type="text" class="form-control" id="api_key" name="api_key" required>
+                            <div class="form-text">Your Angle One API key (from API management section)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="form-text">Your Angle One account password</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="totp_key" class="form-label">TOTP Secret</label>
+                            <input type="text" class="form-control" id="totp_key" name="totp_key" required>
+                            <div class="form-text">Your TOTP secret key for generating authentication codes</div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
+                            <label class="form-check-label" for="is_active">Enable Trading</label>
+                            <div class="form-text">When enabled, this account will receive trade signals</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Add Account</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Instructions</h5>
+                </div>
+                <div class="card-body">
+                    <h6>How to get your API Key</h6>
+                    <ol>
+                        <li>Log in to your Angle One account</li>
+                        <li>Go to API Management section</li>
+                        <li>Generate a new API key</li>
+                        <li>Make sure trading APIs are enabled</li>
+                    </ol>
+                    <h6>How to get your TOTP Secret</h6>
+                    <ol>
+                        <li>Enable 2FA on your Angle One account</li>
+                        <li>When setting up 2FA, you'll receive a TOTP secret</li>
+                        <li>Save this secret for API authentication</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

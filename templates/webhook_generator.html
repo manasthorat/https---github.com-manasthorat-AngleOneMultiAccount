@@ -1,0 +1,594 @@
+<!-- templates/webhook_generator.html -->
+{% extends "base.html" %}
+
+{% block title %}Webhook Generator - Angle One Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">TradingView Webhook Generator</h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Create Webhook JSON</h5>
+                </div>
+                <div class="card-body">
+                    <form id="webhookForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="action" class="form-label">Action</label>
+                                    <select class="form-select" id="action" required>
+                                        <option value="BUY">BUY</option>
+                                        <option value="SELL">SELL</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="exchange" class="form-label">Exchange</label>
+                                    <select class="form-select" id="exchange" required>
+                                        <option value="NSE">NSE</option>
+                                        <option value="BSE">BSE</option>
+                                        <option value="NFO">NFO</option>
+                                        <option value="MCX">MCX</option>
+                                        <option value="CDS">CDS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="symbol" class="form-label">Symbol</label>
+                                    <input type="text" class="form-control" id="symbol" placeholder="e.g. RELIANCE-EQ" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="symbol_token" class="form-label">Symbol Token</label>
+                                    <input type="text" class="form-control" id="symbol_token" placeholder="e.g. 2885" required>
+                                    <div class="form-text">Use Symbol Search to find the correct token</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="product_type" class="form-label">Product Type</label>
+                                    <select class="form-select" id="product_type" required>
+                                        <option value="INTRADAY">INTRADAY (MIS)</option>
+                                        <option value="DELIVERY">DELIVERY (CNC)</option>
+                                        <option value="CARRYFORWARD">CARRYFORWARD (NRML)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="order_type" class="form-label">Order Type</label>
+                                    <select class="form-select" id="order_type" required>
+                                        <option value="MARKET">MARKET</option>
+                                        <option value="LIMIT">LIMIT</option>
+                                        <option value="STOPLOSS_LIMIT">STOPLOSS_LIMIT</option>
+                                        <option value="STOPLOSS_MARKET">STOPLOSS_MARKET</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="quantity" class="form-label">Quantity</label>
+                                    <input type="number" class="form-control" id="quantity" value="1" min="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="price" class="form-label">Price</label>
+                                    <input type="number" class="form-control" id="price" step="0.05" placeholder="Required for LIMIT orders">
+                                    <div class="form-text">Leave empty for MARKET orders</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row" id="bracketOrderSection">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="take_profit" class="form-label">Take Profit</label>
+                                    <input type="number" class="form-control" id="take_profit" step="0.05" placeholder="Target price">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="stop_loss" class="form-label">Stop Loss</label>
+                                    <input type="number" class="form-control" id="stop_loss" step="0.05" placeholder="Stop loss price">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3" id="triggerPriceSection" style="display: none;">
+                            <label for="trigger_price" class="form-label">Trigger Price</label>
+                            <input type="number" class="form-control" id="trigger_price" step="0.05" placeholder="Required for STOPLOSS orders">
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Generate Webhook JSON</button>
+                            <button type="button" class="btn btn-outline-secondary" id="saveTemplateBtn">Save as Template</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>Saved Templates</h5>
+                </div>
+                <div class="card-body">
+                    <div id="savedTemplates">
+                        <div class="alert alert-info">No saved templates yet.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5>Webhook JSON</h5>
+                    <button class="btn btn-sm btn-outline-primary" id="copyJson">Copy</button>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="webhookUrl" class="form-label">Your Webhook URL</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="webhookUrl" value="http://your-server:80/webhook" readonly>
+                            <button class="btn btn-outline-secondary" type="button" id="copyUrlBtn">Copy</button>
+                        </div>
+                        <div class="form-text">Use this URL in your TradingView alert settings</div>
+                    </div>
+                    
+                    <label for="webhookJson" class="form-label">Webhook JSON</label>
+                    <pre id="webhookJson" class="bg-light p-3" style="min-height: 300px; overflow-y: auto;">
+{
+  "webhook_key": "{{ webhook_secret }}",
+  "action": "BUY",
+  "symbol": "SYMBOL",
+  "symbol_token": "TOKEN",
+  "exchange": "NSE",
+  "product_type": "INTRADAY",
+  "order_type": "MARKET",
+  "quantity": 1
+}
+                    </pre>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>TradingView Variables</h5>
+                </div>
+                <div class="card-body">
+                    <p>You can use these TradingView variables in your webhook JSON:</p>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Variable</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>{{strategy.order.action}}</code></td>
+                                <td>BUY or SELL from your strategy</td>
+                            </tr>
+                            <tr>
+                                <td><code>{{ticker}}</code></td>
+                                <td>Current trading symbol</td>
+                            </tr>
+                            <tr>
+                                <td><code>{{strategy.position_size}}</code></td>
+                                <td>Position size from strategy</td>
+                            </tr>
+                            <tr>
+                                <td><code>{{close}}</code></td>
+                                <td>Latest closing price</td>
+                            </tr>
+                            <tr>
+                                <td><code>{{strategy.order.price}}</code></td>
+                                <td>Entry price from strategy</td>
+                            </tr>
+                            <tr>
+                                <td><code>{{strategy.order.stop_price}}</code></td>
+                                <td>Stop price from strategy</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Set the current server address in the webhook URL field
+        const currentHost = window.location.hostname;
+        const currentPort = window.location.port;
+        let webhookUrl = 'http://' + currentHost;
+        if (currentPort) {
+            webhookUrl += ':' + currentPort;
+        }
+        webhookUrl += '/webhook';
+        $('#webhookUrl').val(webhookUrl);
+        
+        // Show/hide trigger price section based on order type
+        $('#order_type').change(function() {
+            const orderType = $(this).val();
+            if (orderType.includes('STOPLOSS')) {
+                $('#triggerPriceSection').show();
+            } else {
+                $('#triggerPriceSection').hide();
+            }
+        });
+        
+        // Generate webhook JSON when form is submitted
+        $('#webhookForm').submit(function(e) {
+            e.preventDefault();
+            
+            const webhookData = {
+                "webhook_key": "{{ webhook_secret }}",
+                "action": $('#action').val(),
+                "symbol": $('#symbol').val(),
+                "symbol_token": $('#symbol_token').val(),
+                "exchange": $('#exchange').val(),
+                "product_type": $('#product_type').val(),
+                "order_type": $('#order_type').val(),
+                "quantity": parseInt($('#quantity').val())
+            };
+            
+            // Add optional fields if they have values
+            const price = $('#price').val();
+            if (price) {
+                webhookData.price = price;
+            }
+            
+            const takeProfit = $('#take_profit').val();
+            if (takeProfit) {
+                webhookData.takeProfit = takeProfit;
+            }
+            
+            const stopLoss = $('#stop_loss').val();
+            if (stopLoss) {
+                webhookData.stopLoss = stopLoss;
+            }
+            
+            const triggerPrice = $('#trigger_price').val();
+            if (triggerPrice) {
+                webhookData.trigger_price = triggerPrice;
+            }
+            
+            // Display the generated JSON
+            $('#webhookJson').text(JSON.stringify(webhookData, null, 2));
+        });
+        
+        // Copy webhook JSON to clipboard
+        $('#copyJson').click(function() {
+            const json = $('#webhookJson').text();
+            navigator.clipboard.writeText(json).then(function() {
+                alert('Webhook JSON copied to clipboard!');
+            });
+        });
+        
+        // Copy webhook URL to clipboard
+        $('#copyUrlBtn').click(function() {
+            const url = $('#webhookUrl').val();
+            navigator.clipboard.writeText(url).then(function() {
+                alert('Webhook URL copied to clipboard!');
+            });
+        });
+        
+        // Save template
+        $('#saveTemplateBtn').click(function() {
+            const templateName = prompt('Enter a name for this template:');
+            if (!templateName) return;
+            
+            // Get current form values
+            const template = {
+                name: templateName,
+                action: $('#action').val(),
+                symbol: $('#symbol').val(),
+                symbol_token: $('#symbol_token').val(),
+                exchange: $('#exchange').val(),
+                product_type: $('#product_type').val(),
+                order_type: $('#order_type').val(),
+                quantity: $('#quantity').val(),
+                price: $('#price').val(),
+                take_profit: $('#take_profit').val(),
+                stop_loss: $('#stop_loss').val(),
+                trigger_price: $('#trigger_price').val()
+            };
+            
+            // Get existing templates from localStorage
+            let templates = JSON.parse(localStorage.getItem('webhook_templates') || '[]');
+            
+            // Add new template
+            templates.push(template);
+            
+            // Save to localStorage
+            localStorage.setItem('webhook_templates', JSON.stringify(templates));
+            
+            // Refresh templates display
+            loadSavedTemplates();
+            
+            alert('Template saved successfully!');
+        });
+        
+        // Load saved templates from localStorage
+        function loadSavedTemplates() {
+            const templates = JSON.parse(localStorage.getItem('webhook_templates') || '[]');
+            
+            if (templates.length === 0) {
+                $('#savedTemplates').html('<div class="alert alert-info">No saved templates yet.</div>');
+                return;
+            }
+            
+            let html = '<div class="list-group">';
+            templates.forEach((template, index) => {
+                html += `
+                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">${template.name}</h5>
+                            <p class="mb-1">${template.symbol} (${template.exchange}) - ${template.action} ${template.quantity} @ ${template.order_type}</p>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary load-template" data-index="${index}">Load</button>
+                            <button class="btn btn-sm btn-outline-danger delete-template" data-index="${index}">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            $('#savedTemplates').html(html);
+            
+            // Add event listeners for template buttons
+            $('.load-template').click(function() {
+                const index = $(this).data('index');
+                loadTemplate(index);
+            });
+            
+            $('.delete-template').click(function() {
+                const index = $(this).data('index');
+                deleteTemplate(index);
+            });
+        }
+        
+        // Load a template into the form
+        function loadTemplate(index) {
+            const templates = JSON.parse(localStorage.getItem('webhook_templates') || '[]');
+            const template = templates[index];
+            
+            $('#action').val(template.action);
+            $('#symbol').val(template.symbol);
+            $('#symbol_token').val(template.symbol_token);
+            $('#exchange').val(template.exchange);
+            $('#product_type').val(template.product_type);
+            $('#order_type').val(template.order_type);
+            $('#quantity').val(template.quantity);
+            $('#price').val(template.price);
+            $('#take_profit').val(template.take_profit);
+            $('#stop_loss').val(template.stop_loss);
+            $('#trigger_price').val(template.trigger_price);
+            
+            // Update the display of conditional fields
+            $('#order_type').trigger('change');
+            
+            // Generate the JSON
+            $('#webhookForm').trigger('submit');
+        }
+        
+        // Delete a template
+        function deleteTemplate(index) {
+            if (confirm('Are you sure you want to delete this template?')) {
+                const templates = JSON.parse(localStorage.getItem('webhook_templates') || '[]');
+                templates.splice(index, 1);
+                localStorage.setItem('webhook_templates', JSON.stringify(templates));
+                loadSavedTemplates();
+            }
+        }
+        
+        // Check if there's a template from symbol search
+        const webhookTemplate = localStorage.getItem('webhook_template');
+        if (webhookTemplate) {
+            try {
+                const template = JSON.parse(webhookTemplate);
+                $('#action').val(template.action);
+                $('#symbol').val(template.symbol);
+                $('#symbol_token').val(template.symbol_token);
+                $('#exchange').val(template.exchange);
+                $('#product_type').val(template.product_type);
+                $('#order_type').val(template.order_type);
+                $('#quantity').val(template.quantity);
+                if (template.price) $('#price').val(template.price);
+                
+                // Generate the JSON
+                $('#webhookForm').trigger('submit');
+                
+                // Clear the temporary template
+                localStorage.removeItem('webhook_template');
+            } catch (e) {
+                console.error('Error loading webhook template:', e);
+            }
+        }
+        
+        // Load saved templates on page load
+        loadSavedTemplates();
+    });
+</script>
+{% endblock %}
+{% endblock %}<!-- templates/add_account.html -->
+{% extends "base.html" %}
+
+{% block title %}Add Account - Angle One Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Add New Account</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="/accounts" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Accounts
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Angle One Trading System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <style>
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        }
+        
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .nav-link.active {
+            color: #2470dc;
+        }
+        
+        .main-content {
+            margin-left: 240px;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% if session.logged_in %}
+    <nav class="navbar navbar-dark fixed-top bg-dark p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 mr-0 px-3" href="/">Angle One Trading System</a>
+        <div class="ml-auto">
+            <span class="text-light mr-3">Welcome, Admin</span>
+            <a href="/logout" class="btn btn-sm btn-outline-light mr-2">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+                <div class="sidebar-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+                                <i class="bi bi-speedometer2 mr-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/accounts' %}active{% endif %}" href="/accounts">
+                                <i class="bi bi-person-badge mr-2"></i> Accounts
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/positions' %}active{% endif %}" href="/positions">
+                                <i class="bi bi-graph-up mr-2"></i> Positions
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/orders' %}active{% endif %}" href="/orders">
+                                <i class="bi bi-list-check mr-2"></i> Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/symbol_search' %}active{% endif %}" href="/symbol_search">
+                                <i class="bi bi-search mr-2"></i> Symbol Search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/webhook_generator' %}active{% endif %}" href="/webhook_generator">
+                                <i class="bi bi-code-slash mr-2"></i> Webhook Generator
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                        <span>System</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/check-connection">
+                                <i class="bi bi-wifi mr-2"></i> Check Connections
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/health">
+                                <i class="bi bi-heart-pulse mr-2"></i> System Health
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main role="main" class="main-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    {% else %}
+        {% block auth_content %}{% endblock %}
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

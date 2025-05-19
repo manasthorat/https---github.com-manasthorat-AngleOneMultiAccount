@@ -1,0 +1,529 @@
+<!-- templates/positions.html -->
+{% extends "base.html" %}
+
+{% block title %}Options Positions - Angle One Trading System{% endblock %}
+
+{% block head %}
+<style>
+    .status-active {
+        color: #28a745;
+    }
+    .status-warning {
+        color: #ffc107;
+    }
+    .status-danger {
+        color: #dc3545;
+    }
+    .price-up {
+        animation: pulse-green 1s;
+    }
+    .price-down {
+        animation: pulse-red 1s;
+    }
+    @keyframes pulse-green {
+        0% { background-color: rgba(40, 167, 69, 0.3); }
+        100% { background-color: transparent; }
+    }
+    @keyframes pulse-red {
+        0% { background-color: rgba(220, 53, 69, 0.3); }
+        100% { background-color: transparent; }
+    }
+    .position-row:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    .progress-bar-target {
+        background-color: #28a745;
+    }
+    .progress-bar-stop {
+        background-color: #dc3545;
+    }
+    .trade-progress {
+        height: 5px;
+    }
+    .card-header .badge {
+        font-size: 85%;
+    }
+    .summary-card {
+        transition: all 0.3s;
+    }
+    .summary-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Options Positions Monitor</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="checkAllPositions">
+                <i class="bi bi-arrow-repeat"></i> Check All Now
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary me-2" id="refreshPositions">
+                <i class="bi bi-arrow-repeat"></i> Refresh
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" id="exitAllPositions">
+                <i class="bi bi-x-circle"></i> Exit All Positions
+            </button>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card summary-card bg-light">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Active Trades</h6>
+                    <h3 class="card-title" id="active-trades-count">--</h3>
+                    <p class="card-text"><small>Monitored positions</small></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card bg-light">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total P&L</h6>
+                    <h3 class="card-title" id="total-pnl">₹ --</h3>
+                    <div class="small" id="total-pnl-percent">-- %</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card bg-light">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Market Status</h6>
+                    <h3 class="card-title" id="market-status">--</h3>
+                    <div class="small" id="last-check">Last check: --</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card bg-light">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Monitor Status</h6>
+                    <h3 class="card-title" id="monitor-status">--</h3>
+                    <div id="next-check">Next check: --</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Options Positions Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">Options Positions</h5>
+                <small class="text-muted">Automatically monitored for target & stop-loss</small>
+            </div>
+            <div>
+                <input type="text" id="positionSearch" class="form-control form-control-sm" placeholder="Search positions...">
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="loading-indicator" class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading positions...</p>
+            </div>
+            
+            <div id="positions-table-container" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="positionsTable">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Underlying</th>
+                                <th>Current Price</th>
+                                <th>Target/Stop</th>
+                                <th>Progress</th>
+                                <th>Entry Price</th>
+                                <th>Current</th>
+                                <th>P&L</th>
+                                <th>Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positions-tbody">
+                            <!-- Positions will be loaded here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="no-positions" class="alert alert-info" style="display: none;">
+                No active options positions found.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global variables
+    let positionsData = [];
+    let lastUpdateTime = null;
+    let refreshInterval = null;
+    
+    $(document).ready(function() {
+        // Initial load
+        loadPositions();
+        
+        // Set up auto-refresh (every 20 seconds)
+        refreshInterval = setInterval(loadPositions, 20000);
+        
+        // Setup UI event handlers
+        $("#refreshPositions").click(function() {
+            loadPositions();
+        });
+        
+        $("#checkAllPositions").click(function() {
+            checkAllPositions();
+        });
+        
+        $("#exitAllPositions").click(function() {
+            if (confirm("Are you sure you want to exit ALL options positions? This action cannot be undone.")) {
+                exitAllPositions();
+            }
+        });
+        
+        // Search functionality
+        $("#positionSearch").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            $("#positionsTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+    });
+    
+    // Function to load positions from the API
+    function loadPositions() {
+        $("#loading-indicator").show();
+        $("#positions-table-container").hide();
+        $("#no-positions").hide();
+        
+        $.ajax({
+            url: '/api/positions',
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                console.log("Positions data:", data);
+                positionsData = data.active_trades || [];
+                
+                // Update summary data
+                updateSummary(data);
+                
+                if (positionsData.length > 0) {
+                    renderPositionsTable(positionsData);
+                    $("#positions-table-container").show();
+                } else {
+                    $("#no-positions").show();
+                }
+                
+                $("#loading-indicator").hide();
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading positions:", error);
+                $("#loading-indicator").hide();
+                $("#no-positions").text("Error loading positions: " + error).show();
+            }
+        });
+    }
+    
+    // Render the positions table
+    function renderPositionsTable(positions) {
+        const tbody = $("#positions-tbody");
+        tbody.empty();
+        
+        positions.forEach(function(position) {
+            const pnl = position.pnl || 0;
+            const pnlPercent = position.pnl_percent || 0;
+            const pnlClass = pnl >= 0 ? "text-success" : "text-danger";
+            
+            // Calculate price progress towards target or stop-loss
+            let progressTarget = 0, progressStop = 0;
+            
+            if (position.underlying_current_price && position.underlying_entry_price) {
+                const currentPrice = parseFloat(position.underlying_current_price);
+                const entryPrice = parseFloat(position.underlying_entry_price);
+                const targetPrice = parseFloat(position.underlying_target);
+                const stopPrice = parseFloat(position.underlying_stop_loss);
+                
+                if (position.option_type === "CE") { // Call option - bullish
+                    if (currentPrice > entryPrice) {
+                        // Moving towards target
+                        progressTarget = Math.min(100, ((currentPrice - entryPrice) / (targetPrice - entryPrice)) * 100);
+                    } else if (currentPrice < entryPrice) {
+                        // Moving towards stop-loss
+                        progressStop = Math.min(100, ((entryPrice - currentPrice) / (entryPrice - stopPrice)) * 100);
+                    }
+                } else { // Put option - bearish
+                    if (currentPrice < entryPrice) {
+                        // Moving towards target
+                        progressTarget = Math.min(100, ((entryPrice - currentPrice) / (entryPrice - targetPrice)) * 100);
+                    } else if (currentPrice > entryPrice) {
+                        // Moving towards stop-loss
+                        progressStop = Math.min(100, ((currentPrice - entryPrice) / (stopPrice - entryPrice)) * 100);
+                    }
+                }
+            }
+            
+            // Format entry time
+            const entryTime = new Date(position.entry_time);
+            const formattedTime = entryTime.toLocaleString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit'
+            });
+            
+            // Create the row
+            const row = $("<tr>").addClass("position-row");
+            
+            row.html(`
+                <td>
+                    <strong>${position.symbol}</strong>
+                    <div class="small">${position.option_type} (${position.expiry})</div>
+                </td>
+                <td>
+                    ${position.underlying_symbol}
+                    <div class="d-flex align-items-center">
+                        <span class="badge ${position.option_type === 'CE' ? 'bg-success' : 'bg-danger'} me-1">
+                            ${position.option_type === 'CE' ? 'BULL' : 'BEAR'}
+                        </span>
+                        <span class="small">${position.underlying_current_price || '--'}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex flex-column">
+                        <div class="small">Entry: ${position.underlying_entry_price || '--'}</div>
+                        <div class="small text-success">Target: ${position.underlying_target || '--'}</div>
+                        <div class="small text-danger">Stop: ${position.underlying_stop_loss || '--'}</div>
+                    </div>
+                </td>
+                <td>
+                    <div class="small d-flex justify-content-between mb-1">
+                        <span>Stop</span>
+                        <span>Target</span>
+                    </div>
+                    <div class="progress trade-progress">
+                        <div class="progress-bar progress-bar-stop" role="progressbar" style="width: ${progressStop}%" 
+                            aria-valuenow="${progressStop}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar progress-bar-target" role="progressbar" style="width: ${progressTarget}%" 
+                            aria-valuenow="${progressTarget}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex justify-content-between">
+                        <div class="text-nowrap">${position.entry_price || '--'}</div>
+                    </div>
+                </td>
+                <td class="text-nowrap">
+                    ${position.current_price || '--'}
+                </td>
+                <td class="${pnlClass} text-nowrap">
+                    <strong>₹${formatNumber(pnl)}</strong>
+                    <div class="small">(${pnlPercent.toFixed(2)}%)</div>
+                </td>
+                <td class="text-nowrap">
+                    ${formattedTime}
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger exit-position-btn" 
+                        data-trade-id="${position.trade_id}">
+                        Exit
+                    </button>
+                </td>
+            `);
+            
+            tbody.append(row);
+        });
+        
+        // Attach event handlers to exit buttons
+        $(".exit-position-btn").click(function() {
+            const tradeId = $(this).data("trade-id");
+            if (confirm("Are you sure you want to exit this position?")) {
+                exitPosition(tradeId);
+            }
+        });
+    }
+    
+    // Function to update summary cards
+    function updateSummary(data) {
+        // Active trades count
+        $("#active-trades-count").text(data.trade_count || 0);
+        
+        // Total P&L
+        const totalPnl = data.total_pnl || 0;
+        $("#total-pnl").text("₹ " + formatNumber(totalPnl));
+        $("#total-pnl").removeClass("text-success text-danger")
+            .addClass(totalPnl >= 0 ? "text-success" : "text-danger");
+        
+        // Market status
+        const marketStatus = data.market_status || "UNKNOWN";
+        $("#market-status").text(marketStatus);
+        $("#market-status").removeClass("text-success text-warning text-danger");
+        
+        if (marketStatus === "OPEN") {
+            $("#market-status").addClass("text-success");
+        } else if (marketStatus === "CLOSED") {
+            $("#market-status").addClass("text-danger");
+        } else {
+            $("#market-status").addClass("text-warning");
+        }
+        
+        // Last check time
+        if (data.last_update) {
+            const lastUpdate = new Date(data.last_update);
+            $("#last-check").text("Last check: " + lastUpdate.toLocaleTimeString());
+        }
+        
+        // Monitor status
+        $("#monitor-status").text("Running");
+        $("#monitor-status").addClass("text-success");
+        
+        // Calculate next check time (20 seconds from now)
+        const now = new Date();
+        const nextCheck = new Date(now.getTime() + 20000);
+        $("#next-check").text("Next refresh: " + nextCheck.toLocaleTimeString());
+    }
+    
+    // Function to exit a position
+    function exitPosition(tradeId) {
+        $.ajax({
+            url: `/api/positions/exit/${tradeId}`,
+            type: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    showToast('Success', response.message, 'success');
+                    loadPositions(); // Reload positions after successful exit
+                } else {
+                    showToast('Error', response.message, 'danger');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error exiting position:", error);
+                showToast('Error', 'Failed to exit position: ' + error, 'danger');
+            }
+        });
+    }
+    
+    // Function to exit all positions
+    function exitAllPositions() {
+        // First disable the button to prevent multiple clicks
+        $("#exitAllPositions").prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exiting...');
+        
+        // Get all trade IDs
+        const tradeIds = positionsData.map(position => position.trade_id);
+        let completedCount = 0;
+        let successCount = 0;
+        
+        if (tradeIds.length === 0) {
+            showToast('Info', 'No positions to exit', 'info');
+            $("#exitAllPositions").prop('disabled', false).html('<i class="bi bi-x-circle"></i> Exit All Positions');
+            return;
+        }
+        
+        // Exit each position one by one
+        tradeIds.forEach(function(tradeId) {
+            $.ajax({
+                url: `/api/positions/exit/${tradeId}`,
+                type: 'POST',
+                success: function(response) {
+                    completedCount++;
+                    if (response.success) {
+                        successCount++;
+                    }
+                    
+                    // When all requests are complete
+                    if (completedCount === tradeIds.length) {
+                        showToast('Result', `Exited ${successCount} of ${tradeIds.length} positions`, 
+                                 successCount === tradeIds.length ? 'success' : 'warning');
+                        
+                        // Re-enable the button
+                        $("#exitAllPositions").prop('disabled', false).html('<i class="bi bi-x-circle"></i> Exit All Positions');
+                        
+                        // Reload positions
+                        loadPositions();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    completedCount++;
+                    console.error("Error exiting position:", error);
+                    
+                    // When all requests are complete
+                    if (completedCount === tradeIds.length) {
+                        showToast('Result', `Exited ${successCount} of ${tradeIds.length} positions`, 'warning');
+                        
+                        // Re-enable the button
+                        $("#exitAllPositions").prop('disabled', false).html('<i class="bi bi-x-circle"></i> Exit All Positions');
+                        
+                        // Reload positions
+                        loadPositions();
+                    }
+                }
+            });
+        });
+    }
+    
+    // Function to manually check all positions
+    function checkAllPositions() {
+        $("#checkAllPositions").prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Checking...');
+        
+        $.ajax({
+            url: '/api/positions/check-all',
+            type: 'POST',
+            success: function(response) {
+                showToast('Success', 'All positions checked', 'success');
+                loadPositions(); // Reload positions
+                $("#checkAllPositions").prop('disabled', false).html('<i class="bi bi-arrow-repeat"></i> Check All Now');
+            },
+            error: function(xhr, status, error) {
+                console.error("Error checking positions:", error);
+                showToast('Error', 'Failed to check positions: ' + error, 'danger');
+                $("#checkAllPositions").prop('disabled', false).html('<i class="bi bi-arrow-repeat"></i> Check All Now');
+            }
+        });
+    }
+    
+    // Helper function to format numbers with commas
+    function formatNumber(num) {
+        if (num === null || num === undefined) return '--';
+        return parseFloat(num).toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+    
+    // Toast notification helper
+    function showToast(title, message, type) {
+        // Create toast HTML
+        const toastId = 'toast-' + Date.now();
+        const toast = `
+            <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true" id="${toastId}">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <strong>${title}</strong>: ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        // Create toast container if it doesn't exist
+        if ($('#toast-container').length === 0) {
+            $('body').append('<div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>');
+        }
+        
+        // Add toast to container
+        $('#toast-container').append(toast);
+        
+        // Show the toast
+        const toastElement = new bootstrap.Toast(document.getElementById(toastId), { delay: 5000 });
+        toastElement.show();
+    }
+</script>
+{% endblock %}

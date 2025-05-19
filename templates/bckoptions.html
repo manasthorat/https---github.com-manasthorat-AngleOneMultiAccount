@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Options Trading - Angle One Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Options Trading</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <button type="button" class="btn btn-sm btn-outline-primary me-2" id="refreshOptions">
+                <i class="bi bi-arrow-repeat"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Options Configuration -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Options Trading Configuration</h5>
+        </div>
+        <div class="card-body">
+            <form id="optionsConfigForm">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="optionMoneyness" class="form-label">Option Moneyness</label>
+                            <select class="form-select" id="optionMoneyness" name="option_moneyness">
+                                <option value="ATM" {% if option_settings.moneyness == "ATM" %}selected{% endif %}>At The Money (ATM)</option>
+                                <option value="ITM" {% if option_settings.moneyness == "ITM" %}selected{% endif %}>In The Money (ITM)</option>
+                                <option value="OTM" {% if option_settings.moneyness == "OTM" %}selected{% endif %}>Out of The Money (OTM)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="expiryPreference" class="form-label">Expiry Preference</label>
+                            <select class="form-select" id="expiryPreference" name="expiry_preference">
+                                <option value="weekly" {% if option_settings.expiry == "weekly" %}selected{% endif %}>Weekly</option>
+                                <option value="monthly" {% if option_settings.expiry == "monthly" %}selected{% endif %}>Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="optionsLotSize" class="form-label">Lot Size</label>
+                            <input type="number" class="form-control" id="optionsLotSize" name="lot_size" value="{{ option_settings.lot_size }}" min="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Active Option Trades -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between">
+            <h5>Active Option Trades</h5>
+            <div>
+                <input type="text" id="optionSearch" class="form-control form-control-sm" placeholder="Search trades...">
+            </div>
+        </div>
+        <div class="card-body">
+            {% if active_trades %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="optionsTable">
+                    <thead>
+                        <tr>
+                            <th>Client ID</th>
+                            <th>Option Symbol</th>
+                            <th>Type</th>
+                            <th>Underlying</th>
+                            <th>Underlying Price</th>
+                            <th>Targets</th>
+                            <th>Qty</th>
+                            <th>Entry Time</th>
+                            <th>Expiry</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trade in active_trades %}
+                        <tr>
+                            <td>{{ trade.client_id }}</td>
+                            <td>{{ trade.symbol }}</td>
+                            <td>{{ trade.option_type }}</td>
+                            <td>{{ trade.underlying_symbol }}</td>
+                            <td>
+                                {% if trade.current_underlying_price %}
+                                ₹{{ trade.current_underlying_price }}
+                                <br>
+                                <small>Entry: ₹{{ trade.underlying_entry_price }}</small>
+                                {% else %}
+                                Entry: ₹{{ trade.underlying_entry_price }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                SL: ₹{{ trade.underlying_stop_loss }}<br>
+                                Target: ₹{{ trade.underlying_target }}
+                            </td>
+                            <td>{{ trade.quantity }}</td>
+                            <td>{{ trade.entry_time }}</td>
+                            <td>{{ trade.expiry }}</td>
+                            <td>
+                                <form action="/exit-option/{{ trade.client_id }}/{{ trade.symbol }}" method="post" onsubmit="return confirm('Are you sure you want to exit this option position?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">Exit</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info" role="alert">
+                No active option trades.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Options Webhook Instructions -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Webhook JSON Format for Options Trading</h5>
+        </div>
+        <div class="card-body">
+            <p>To use the options trading functionality with TradingView, send a webhook with the following format:</p>
+            <pre id="optionsWebhookExample" class="bg-light p-3">
+{
+  "webhook_key": "{{ webhook_secret }}",
+  "options_mode": true,
+  "action": "BUY",
+  "symbol": "HDFCBANK",
+  "exchange": "NSE",
+  "quantity": 1,
+  "option_moneyness": "ATM",
+  "expiry_preference": "weekly",
+  "underlying_price": 1700.50,
+  "underlying_stop_loss": 1650.00,
+  "underlying_target": 1750.00
+}
+            </pre>
+            <div class="d-grid">
+                <button class="btn btn-outline-primary" id="copyOptionsWebhook">Copy to Clipboard</button>
+            </div>
+            <hr>
+            <p><strong>Notes:</strong></p>
+            <ul>
+                <li>Set <code>options_mode: true</code> to use the options trading system</li>
+                <li>For <code>action</code>, use "BUY" for calls (bullish) or "SELL" for puts (bearish)</li>
+                <li>Symbol should be the underlying (e.g., HDFCBANK, NIFTY, BANKNIFTY)</li>
+                <li>The system will automatically find the option token</li>
+                <li>Stop loss and target are based on the underlying price, not the option price</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Save options settings
+        $('#optionsConfigForm').submit(function(e) {
+            e.preventDefault();
+            
+            const settings = {
+                moneyness: $('#optionMoneyness').val(),
+                expiry: $('#expiryPreference').val(),
+                lot_size: $('#optionsLotSize').val()
+            };
+            
+            $.ajax({
+                url: '/update-options-settings',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(settings),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert('Options settings saved successfully');
+                    } else {
+                        alert('Error saving settings: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Error saving settings. Please try again.');
+                }
+            });
+        });
+        
+        // Search functionality
+        $("#optionSearch").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            $("#optionsTable tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+        
+        // Copy webhook example
+        $('#copyOptionsWebhook').click(function() {
+            const text = $('#optionsWebhookExample').text();
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Webhook JSON copied to clipboard!');
+            });
+        });
+        
+        // Refresh button
+        $('#refreshOptions').click(function() {
+            location.reload();
+        });
+        
+        // Auto-refresh every 30 seconds
+        setInterval(function() {
+            location.reload();
+        }, 30000);
+    });
+</script>
+{% endblock %}
+{% endblock %}
